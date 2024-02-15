@@ -1,0 +1,26 @@
+[package]
+edition = "2021"
+name = "nss-docker-ng"
+version = "1.0.0"
+authors = ["Patrick Kuijvenhoven <patrick.kuijvenhoven@gmail.com>"]
+description = "NSS plugin for finding Docker containers by their ID or name"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/petski/nss-docker-ng"
+
+[lib]
+name = "nss_docker_ng"
+crate-type = [ "cdylib" ]
+
+[dependencies]
+libc = "0.2.153"
+lazy_static = "1.4.0"
+paste = "1.0"
+libnss = "0.6.0"
+debug_print = "1.0.0"
+docker-api = "0.14.0"
+tokio = { version = "1.36.0", features = ["rt", "macros"] }
+
+# https://github.com/johnthagen/min-sized-rust
+[profile.release]
+strip = true
