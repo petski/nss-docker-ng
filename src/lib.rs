@@ -74,7 +74,7 @@ async fn get_host_by_name(name: &str, family: AddressFamily) -> Result<Option<Ho
     if let Some(networks) = inspect_result.network_settings.and_then(|settings| settings.networks) {
         for (_network, end_point_settings) in networks {
             if let Some(ip_address) = end_point_settings.ip_address {
-                if ip_address.len() == 0 {
+                if ip_address.is_empty() {
                     debug_eprintln!("In '{}', IP address is an empty string", _network);
                     continue;
                 }
