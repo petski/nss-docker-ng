@@ -12,7 +12,7 @@ crate-type = [ "cdylib" ]
 libc = "0.2.153"
 lazy_static = "1.4.0"
 paste = "1.0"
-libnss = "0.5.0"
+libnss = "0.6.0"
 debug_print = "1.0.0"
 docker-api = "0.14.0"
 tokio = { version = "1.36.0", features = ["rt", "macros"] }
