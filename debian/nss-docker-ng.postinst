@@ -1,0 +1,47 @@
+#!/bin/sh
+set -e
+
+log() {
+    echo "$*"
+}
+
+# One day we will have https://tracker.debian.org/pkg/dh-nss
+if [ -f /usr/bin/dh_installnss ] ; then
+    log "dh-nss on board, skipping"
+    exit
+fi
+
+# This code was taken from nss-mdns
+
+insert_nss_entry() {
+    log "Checking NSS setup..."
+    if ! [ -e /etc/nsswitch.conf ]; then
+        log "Could not find /etc/nsswitch.conf."
+        return
+    fi
+    perl -i -pe '
+        sub insert {
+            my @bits = split(" ", shift);
+            if (grep { $_ eq "docker_ng" } @bits) {
+                return join " ", @bits;
+            }
+            return join " ", map {
+                $_ eq "files" ? ("$_", "docker_ng [NOTFOUND=return]") : $_
+            } @bits;
+        }
+        s/^(hosts:\s+)(.*)/$1.insert($2)/e;
+    ' /etc/nsswitch.conf
+}
+
+action="$1"
+
+if [ configure = "$action" ]; then
+    if [ -z "$2" ]; then
+        log "First installation detected..."
+        insert_nss_entry
+    else
+        version="$2"
+    fi
+fi
+
+#DEBHELPER#

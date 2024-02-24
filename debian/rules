@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	# I've seen `debcargo`. It looks promising, but it doesn't seem to work well for `cdylib`
+	if [ -f "./vendor.tar.gz" ]; then \
+		tar zxvf ./vendor.tar.gz; \
+		cargo build --release --offline; \
+	else \
+		cargo build --release; \
+	fi
+	patchelf --set-soname libnss_docker_ng.so.2 ./target/release/libnss_docker_ng.so
+
+override_dh_auto_clean:
+	rm -f ./vendor.tar.gz ./Cargo.lock .cargo/config.toml
+	rm -rf ./vendor/ ./target/

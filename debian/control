@@ -1,0 +1,19 @@
+Source: nss-docker-ng
+Section: admin
+Priority: optional
+Build-Depends: debhelper-compat (= 13), cargo, patchelf
+Maintainer: Patrick Kuijvenhoven <patrick.kuijvenhoven+nss-docker-ng@gmail.com>
+Standards-Version: 4.5.1
+Vcs-Git: https://github.com/petski/nss-docker-ng.git
+Vcs-Browser: https://github.com/petski/nss-docker-ng
+Rules-Requires-Root: no
+
+Package: nss-docker-ng
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, perl | dh-nss
+Suggests: docker.io
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Description: NSS plugin for finding Docker containers by their ID or name
+ This package contains a plugin for the Name Service Switch, providing host
+ name resolution for Docker containers by their ID or name
