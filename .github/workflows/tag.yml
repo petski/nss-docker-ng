@@ -1,0 +1,128 @@
+name: On release tag
+
+on:
+  push:
+    tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ]
+
+jobs:
+  qc:
+    uses: ./.github/workflows/qc.yml
+  build_changelog:
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.build_changelog.outputs.changelog }}
+    steps:
+      - name: Build Changelog
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          commitMode: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  cargo_package_version:
+    runs-on: ubuntu-latest
+    outputs:
+      cargo_package_version: ${{ steps.cargo_package_version.outputs.cargo_package_version }}
+      cargo_package_version_vprefixed: ${{ steps.cargo_package_version.outputs.cargo_package_version_vprefixed }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get -y install jq
+      - id: cargo_package_version
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | jq '.packages[0].version' -r)"
+          echo "cargo_package_version=${version}"            >> $GITHUB_OUTPUT
+          echo "cargo_package_version_vprefixed=v${version}" >> $GITHUB_OUTPUT
+  check_cargo_package_version_eq_tag:
+    needs: cargo_package_version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Cargo.toml version
+        if: ${{ needs.cargo_package_version.outputs.cargo_package_version_vprefixed != github.ref_name }}
+        uses: actions/github-script@v3
+        with:
+          script: core.setFailed('Cargo.toml has ${{ needs.cargo_package_version.outputs.cargo_package_version_vprefixed }}, tag is ${{ github.ref_name }}')
+  build_release:
+    needs: [qc, check_cargo_package_version_eq_tag]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: sudo apt-get update && sudo apt-get -y install patchelf
+    - run: |
+        cargo build --release --verbose
+        cp target/release/libnss_docker_ng.so ./libnss_docker_ng.so
+        patchelf --set-soname libnss_docker_ng.so.2 ./libnss_docker_ng.so
+    - uses: actions/upload-artifact@v4
+      with:
+        path: libnss_docker_ng.so
+        name: libnss_docker_ng.so
+  create_gh_release:
+    needs: [build_release, build_changelog]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: libnss_docker_ng.so
+      - name: Create GH release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ needs.build_changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
+          files: libnss_docker_ng.so
+  crates_io_publish:
+    needs: create_gh_release
+    name: Publish (crates.io)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CRATES_IO_API_TOKEN }}
+  launchpad_publish:
+    needs: create_gh_release
+    name: Publish (launchpad)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # curl -s https://api.launchpad.net/1.0/ubuntu/series | jq -r '.entries[] | select(.active == true).name' | xargs | sed 's/ /, /g'
+        distro: [
+          [ noble,  24.04 ],
+          [ mantic, 23.10 ],
+          [ jammy,  22.04 ],
+          [ focal,  20.04 ],
+          [ bionic, 18.04 ],
+          [ xenial, 16.04 ],
+          [ trusty, 14.04 ]
+        ]
+    env:
+      DEBFULLNAME: Patrick Kuijvenhoven
+      DEBEMAIL: patrick.kuijvenhoven+nss-docker-ng@gmail.com
+    steps:
+      - uses: actions/checkout@v4
+      - run: git archive --format=tar.gz --prefix="nss-docker-ng_${GITHUB_REF_NAME#v}/" -o "../nss-docker-ng_${GITHUB_REF_NAME#v}.orig.tar.gz" "$GITHUB_REF_NAME"
+      - run: sudo apt-get update && sudo apt-get -y install devscripts cargo dh-make patchelf
+      - run: |
+          dch \
+            --create \
+            --distribution "${{ matrix.distro[0] }}" \
+            --package nss-docker-ng \
+            --newversion "${GITHUB_REF_NAME#v}-1~ubuntu.${{ matrix.distro[1] }}~${{ matrix.distro[0] }}" \
+            --changelog debian/changelog \
+            "New upstream version"
+      # Prepare vendor.tar.gz (included in debian/source/include-binaries)
+      - run: |
+          mkdir -p .cargo
+          cargo vendor | tee .cargo/config.toml
+          tar -zcf vendor.tar.gz Cargo.lock .cargo/config.toml vendor/
+          rm -rf Cargo.lock .cargo/config.toml vendor/
+      # From https://stackoverflow.com/a/61748039
+      - run: echo -n "${{ secrets.GPG_SIGNING_KEY }}" | base64 --decode | gpg --import
+      - run: debuild -S
+      - run: dput ppa:petski/ubuntu/nss-docker-ng ../nss-docker-ng_${GITHUB_REF_NAME#v}-1~ubuntu.${{ matrix.distro[1] }}~${{ matrix.distro[0] }}_source.changes
