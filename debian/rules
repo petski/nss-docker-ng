@@ -14,5 +14,5 @@ override_dh_auto_install:
 	patchelf --set-soname libnss_docker_ng.so.2 ./target/release/libnss_docker_ng.so
 
 override_dh_auto_clean:
-	rm -f ./vendor.tar.gz ./Cargo.lock .cargo/config.toml
+	rm -f ./Cargo.lock .cargo/config.toml
 	rm -rf ./vendor/ ./target/
