@@ -12,7 +12,7 @@ override_dh_auto_install:
 		cargo build --release; \
 	fi
 	patchelf --set-soname libnss_docker_ng.so.2 ./target/release/libnss_docker_ng.so
-	ldconfig $(CURDIR)/target/release/
+	ln -s libnss_docker_ng.so ./target/release/libnss_docker_ng.so.2
 
 override_dh_auto_clean:
 	rm -f ./Cargo.lock .cargo/config.toml
