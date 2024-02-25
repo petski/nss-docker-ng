@@ -85,7 +85,7 @@ async fn get_host_by_name(
     // > Network mode to use for this container. Supported standard values are: bridge, host, none, and
     // > container:<name|id>. Any other value is taken as a custom network's name to which this container
     // > should connect to
-    let network_mode = match inspect_result.host_config.as_ref().and_then(|host_config| {
+    let mut network_mode = match inspect_result.host_config.as_ref().and_then(|host_config| {
         host_config
             .get("NetworkMode")
             .and_then(|value| value.as_str())
@@ -121,6 +121,15 @@ async fn get_host_by_name(
         }
         None => return Err("Found no networks".into()),
     };
+
+    // The documentation on https://docs.docker.com/engine/api/v1.44/#tag/Container/operation/ContainerInspect
+    // is incomplete. There is another NetworkMode "default":
+    // > which is bridge for Docker Engine, and overlay for Swarm.
+    //
+    // See: https://github.com/docker/docker-py/issues/986
+    if network_mode == "default" && networks.get("default").is_none() {
+        network_mode = "bridge"; // TODO add swwarm support
+    }
 
     // Get the end point settings for the network with the name in network_mode
     let end_point_settings = match networks.get(network_mode) {
