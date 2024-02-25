@@ -12,10 +12,9 @@ use libnss::libnss_host_hooks;
 use std::error::Error;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
-use tokio;
 
-static SUFFIX: &'static str = ".docker";
-static DOCKER_URI: &'static str = "unix:///var/run/docker.sock";
+static SUFFIX: &str = ".docker";
+static DOCKER_URI: &str = "unix:///var/run/docker.sock";
 
 struct DockerNG;
 libnss_host_hooks!(docker_ng, DockerNG);
@@ -147,20 +146,17 @@ async fn get_host_by_name(
         None => return Err("Endpoint has no IP address".into()),
     };
 
-    return match Ipv4Addr::from_str(&ip_address) {
+    return match Ipv4Addr::from_str(ip_address) {
         Ok(ip) => {
             let id = match inspect_result.id.as_ref() {
                 Some(id) => id,
                 None => return Err("No Id".into()),
             };
 
-            let mut aliases = Vec::new();
-            aliases.push([id[..12].to_string(), SUFFIX.to_string()].join(""));
-
             Ok(Some(Host {
                 name: [name.to_string(), SUFFIX.to_string()].join(""),
                 addresses: Addresses::V4(vec![ip]),
-                aliases,
+                aliases: vec![[id[..12].to_string(), SUFFIX.to_string()].join("")],
             }))
         }
         Err(_e) => {
