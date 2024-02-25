@@ -93,13 +93,13 @@ jobs:
       matrix:
         # curl -s https://api.launchpad.net/1.0/ubuntu/series | jq -r '.entries[] | select(.active == true).name' | xargs | sed 's/ /, /g'
         distro: [
-          [ noble,  24.04 ],
-          [ mantic, 23.10 ],
-          [ jammy,  22.04 ],
-          [ focal,  20.04 ],
-          [ bionic, 18.04 ],
-          [ xenial, 16.04 ],
-          [ trusty, 14.04 ]
+          [ noble,  "24.04" ],
+          [ mantic, "23.10" ],
+          [ jammy,  "22.04" ],
+          [ focal,  "20.04" ],
+          [ bionic, "18.04" ],
+          [ xenial, "16.04" ],
+          [ trusty, "14.04" ]
         ]
     env:
       DEBFULLNAME: Patrick Kuijvenhoven
