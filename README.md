@@ -22,6 +22,8 @@ $ curl http://my-app.docker
 $ ping my-app.docker
 PING test.docker (172.17.0.4) 56(84) bytes of data.
 64 bytes from 172.17.0.4: icmp_seq=1 ttl=64 time=0.171 ms
+
+$ docker stop my-app
 ```
 
 # Installation instructions
