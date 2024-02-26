@@ -95,11 +95,7 @@ jobs:
         distro: [
           [ noble,  "24.04" ],
           [ mantic, "23.10" ],
-          [ jammy,  "22.04" ],
-          [ focal,  "20.04" ],
-          [ bionic, "18.04" ],
-          [ xenial, "16.04" ],
-          [ trusty, "14.04" ]
+          [ jammy,  "22.04" ]
         ]
     env:
       DEBFULLNAME: Patrick Kuijvenhoven

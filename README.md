@@ -40,7 +40,7 @@ DESTDIR="/usr/local/lib/nss-docker-ng/" && \
 
 Then, add the `docker_ng` service to the `hosts:`-line in `/etc/nsswitch.conf`. For example: `hosts: files docker_ng dns`
 
-## Ubuntu
+## Ubuntu 22.04 "jammy" and higher
 
 ```
 sudo add-apt-repository ppa:petski/ubuntu/nss-docker-ng && \
