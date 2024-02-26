@@ -26,7 +26,7 @@ insert_nss_entry() {
                 return join " ", @bits;
             }
             return join " ", map {
-                $_ eq "files" ? ("$_", "docker_ng [NOTFOUND=return]") : $_
+                $_ eq "files" ? ("$_", "docker_ng") : $_
             } @bits;
         }
         s/^(hosts:\s+)(.*)/$1.insert($2)/e;

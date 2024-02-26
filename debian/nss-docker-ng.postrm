@@ -23,7 +23,7 @@ remove_nss_entry() {
     perl -i -pe '
         sub remove {
             my $s = shift;
-            $s =~ s/\s+docker_ng(\s+\[NOTFOUND=return\])?//g;
+            $s =~ s/\s+docker_ng//g;
             return $s;
         }
         s/^(hosts:)(.*)/$1.remove($2)/e;
