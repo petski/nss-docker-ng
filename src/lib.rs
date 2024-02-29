@@ -126,7 +126,7 @@ async fn get_host_by_name(
     // > which is bridge for Docker Engine, and overlay for Swarm.
     //
     // See: https://github.com/docker/docker-py/issues/986
-    if network_mode == "default" && networks.get("default").is_none() {
+    if network_mode == "default" && !networks.contains_key("default") {
         network_mode = "bridge"; // TODO add swwarm support
     }
 
