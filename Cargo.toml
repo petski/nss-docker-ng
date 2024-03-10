@@ -28,3 +28,6 @@ mocktopus = "0.8.0"
 # https://github.com/johnthagen/min-sized-rust
 [profile.release]
 strip = true
+
+[patch.crates-io]
+libnss = { git = 'https://github.com/petski/libnss-rs', branch = 'debug-partialeq-for-tests' }
