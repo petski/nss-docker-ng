@@ -21,6 +21,13 @@ debug_print = "1.0.0"
 docker-api = "0.14.0"
 tokio = { version = "1.36.0", features = ["rt", "macros"] }
 
+[dev-dependencies]
+mockito = "1.4.0"
+mocktopus = "0.8.0"
+
 # https://github.com/johnthagen/min-sized-rust
 [profile.release]
 strip = true
+
+[patch.crates-io]
+libnss = { git = 'https://github.com/petski/libnss-rs', branch = 'debug-partialeq-for-tests' }
