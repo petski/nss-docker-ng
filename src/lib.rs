@@ -135,7 +135,7 @@ async fn get_host_by_name(
     //
     // See: https://github.com/docker/docker-py/issues/986
     if network_mode == "default" && !networks.contains_key("default") {
-        network_mode = "bridge"; // TODO add swwarm support
+        network_mode = "bridge"; // TODO add swarm support. Is this really used/needed?
     }
 
     // Get the end point settings for the network with the name in network_mode
