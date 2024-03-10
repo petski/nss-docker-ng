@@ -13,6 +13,9 @@ use std::error::Error;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
+#[cfg(test)]
+use mocktopus::macros::mockable;
+
 static SUFFIX: &str = ".docker";
 static DOCKER_URI: &str = "unix:///var/run/docker.sock";
 
@@ -40,6 +43,11 @@ impl HostHooks for DockerNG {
     }
 }
 
+#[cfg_attr(test, mockable)]
+pub fn get_docker_uri() -> String {
+    DOCKER_URI.to_string()
+}
+
 #[tokio::main]
 async fn get_host_by_name(
     query: &str,
@@ -54,7 +62,7 @@ async fn get_host_by_name(
     }
 
     // Initialize Docker API client
-    let mut docker = Docker::new(DOCKER_URI)?;
+    let mut docker = Docker::new(get_docker_uri())?;
     docker.adjust_api_version().await?;
 
     // Strip suffix from query
@@ -163,4 +171,236 @@ async fn get_host_by_name(
             return Err(format!("Failed to parse IP address '{}': {}", ip_address, _e).into());
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::{Mock, Server, ServerOpts};
+    use mocktopus::mocking::{MockResult, Mockable};
+
+    #[test]
+    fn test_get_host_by_name() {
+        assert_eq!(
+            DockerNG::get_host_by_name(".foo", AddressFamily::IPv4),
+            Response::NotFound
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("foo.docker", AddressFamily::IPv6),
+            Response::NotFound
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name(".docker", AddressFamily::IPv4),
+            Response::NotFound
+        );
+
+        let (_server, _mocks) = init_mocking_features();
+
+        assert_eq!(
+            DockerNG::get_host_by_name("sunny-default-bridge.docker", AddressFamily::IPv4),
+            Response::Success(Host {
+                name: "sunny-default-bridge.docker".to_string(),
+                aliases: vec!["c0ffeec0ffee.docker".to_string()],
+                addresses: Addresses::V4(vec![Ipv4Addr::new(172, 29, 0, 2)]),
+            })
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-404.docker", AddressFamily::IPv4),
+            Response::NotFound
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-no-name.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-no-network-mode.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-network-mode-none.docker", AddressFamily::IPv4),
+            Response::NotFound
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-network-mode-host.docker", AddressFamily::IPv4),
+            Response::NotFound
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-network-mode-container.docker", AddressFamily::IPv4),
+            Response::NotFound
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-zero-networks.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-no-networks.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-network-not-exists.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-ip-address-empty.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-no-ip-address.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-unparseable-ip-address.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name("rainy-no-id.docker", AddressFamily::IPv4),
+            Response::Unavail
+        );
+
+        clear_mocking_features();
+    }
+
+    /*
+     * Returns a server and its mocks based on https://github.com/lipanski/mockito
+     */
+    fn init_mocking_features() -> (Server, [Mock; 15]) {
+        let mut server = Server::new_with_opts(ServerOpts {
+            assert_on_drop: true,
+            ..Default::default()
+        });
+
+        let url = server.url();
+
+        // Mock it
+        get_docker_uri.mock_safe(move || MockResult::Return(url.to_owned()));
+
+        let _version_mock = server
+            .mock("GET", "/version")
+            .expect(14)
+            .with_body_from_file("tests/resources/v1.44/version.body")
+            .create();
+
+        let _inspect_mock_sunny_default_bridge = server
+            .mock("GET", "/v1.44/containers/sunny-default-bridge/json")
+            .with_body_from_file("tests/resources/v1.44/containers/sunny-default-bridge/json.body")
+            .create();
+
+        let _inspect_mock_rainy_404 = server
+            .mock("GET", "/v1.44/containers/rainy-404/json")
+            .with_status(404)
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-404/json.body")
+            .create();
+
+        let _inspect_mock_rainy_no_name = server
+            .mock("GET", "/v1.44/containers/rainy-no-name/json")
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-no-name/json.body")
+            .create();
+
+        let _inspect_mock_rainy_no_network_mode = server
+            .mock("GET", "/v1.44/containers/rainy-no-network-mode/json")
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-no-network-mode/json.body")
+            .create();
+
+        let _inspect_mock_rainy_network_mode_none = server
+            .mock("GET", "/v1.44/containers/rainy-network-mode-none/json")
+            .with_body_from_file(
+                "tests/resources/v1.44/containers/rainy-network-mode-none/json.body",
+            )
+            .create();
+
+        let _inspect_mock_rainy_network_mode_host = server
+            .mock("GET", "/v1.44/containers/rainy-network-mode-host/json")
+            .with_body_from_file(
+                "tests/resources/v1.44/containers/rainy-network-mode-host/json.body",
+            )
+            .create();
+
+        let _inspect_mock_rainy_network_mode_container = server
+            .mock("GET", "/v1.44/containers/rainy-network-mode-container/json")
+            .with_body_from_file(
+                "tests/resources/v1.44/containers/rainy-network-mode-container/json.body",
+            )
+            .create();
+
+        let _inspect_mock_rainy_zero_networks = server
+            .mock("GET", "/v1.44/containers/rainy-zero-networks/json")
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-zero-networks/json.body")
+            .create();
+
+        let _inspect_mock_rainy_no_networks = server
+            .mock("GET", "/v1.44/containers/rainy-no-networks/json")
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-no-networks/json.body")
+            .create();
+
+        let _inspect_mock_rainy_network_not_exists = server
+            .mock("GET", "/v1.44/containers/rainy-network-not-exists/json")
+            .with_body_from_file(
+                "tests/resources/v1.44/containers/rainy-network-not-exists/json.body",
+            )
+            .create();
+
+        let _inspect_mock_rainy_ip_address_empty = server
+            .mock("GET", "/v1.44/containers/rainy-ip-address-empty/json")
+            .with_body_from_file(
+                "tests/resources/v1.44/containers/rainy-ip-address-empty/json.body",
+            )
+            .create();
+
+        let _inspect_mock_rainy_no_ip_address = server
+            .mock("GET", "/v1.44/containers/rainy-no-ip-address/json")
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-no-ip-address/json.body")
+            .create();
+
+        let _inspect_mock_rainy_unparseable_ip_address = server
+            .mock("GET", "/v1.44/containers/rainy-unparseable-ip-address/json")
+            .with_body_from_file(
+                "tests/resources/v1.44/containers/rainy-unparseable-ip-address/json.body",
+            )
+            .create();
+
+        let _inspect_mock_rainy_no_id = server
+            .mock("GET", "/v1.44/containers/rainy-no-id/json")
+            .with_body_from_file("tests/resources/v1.44/containers/rainy-no-id/json.body")
+            .create();
+
+        (
+            server,
+            [
+                _version_mock,
+                _inspect_mock_sunny_default_bridge,
+                _inspect_mock_rainy_404,
+                _inspect_mock_rainy_no_name,
+                _inspect_mock_rainy_no_network_mode,
+                _inspect_mock_rainy_network_mode_none,
+                _inspect_mock_rainy_network_mode_host,
+                _inspect_mock_rainy_network_mode_container,
+                _inspect_mock_rainy_zero_networks,
+                _inspect_mock_rainy_no_networks,
+                _inspect_mock_rainy_network_not_exists,
+                _inspect_mock_rainy_ip_address_empty,
+                _inspect_mock_rainy_no_ip_address,
+                _inspect_mock_rainy_unparseable_ip_address,
+                _inspect_mock_rainy_no_id,
+            ],
+        )
+    }
+
+    fn clear_mocking_features() {
+        get_docker_uri.clear_mock();
+    }
 }
