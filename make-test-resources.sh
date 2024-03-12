@@ -62,6 +62,24 @@ echo "${INSPECT_JSON}" | \
 stop_and_rm_container "sunny-default-bridge"
 
 #
+# Get sunny-default-bridge-container-subdomains-allowed
+#
+
+stop_and_rm_container "sunny-default-bridge-container-subdomains-allowed"
+CONTAINER_ID=$(docker run --name sunny-default-bridge-container-subdomains-allowed -d --label=".com.github.petski.nss-docker-ng.container-subdomains-allowed=true" hashicorp/http-echo:1.0.0 -listen=:80 -text="✅ it works!")
+INSPECT_JSON=$(curl -s --unix-socket /var/run/docker.sock --proto '=http' "./v${VERSION_API_VERSION}/containers/sunny-default-bridge-container-subdomains-allowed/json")
+mkdir -p "tests/resources/v${VERSION_API_VERSION}/containers/sunny-default-bridge-container-subdomains-allowed"
+echo "${INSPECT_JSON}" | \
+        jq \
+        --arg fakeidlong "$FAKE_ID_LONG" \
+        --arg fakeidshort "$FAKE_ID_SHORT" \
+        --arg fakedt "$FAKE_DT" \
+        --arg fakemac "$FAKE_MAC" \
+        "${JQ_FILTER}" \
+        > "tests/resources/v${VERSION_API_VERSION}/containers/sunny-default-bridge-container-subdomains-allowed/json.body"
+stop_and_rm_container "sunny-default-bridge-container-subdomains-allowed"
+
+#
 # Get rainy-404
 #
 

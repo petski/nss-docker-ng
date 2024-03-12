@@ -26,6 +26,23 @@ PING test.docker (172.17.0.4) 56(84) bytes of data.
 $ docker stop my-app
 ```
 
+# Subdomain / wildcard behavior
+
+You can have `nss-docker-ng` respond to all subdomains for a container by setting the label `.com.github.petski.nss-docker-ng.container-subdomains-allowed` to `true`, `True` or `1`.
+
+```
+$ docker run --name my-app-with-subdomains -d --label=".com.github.petski.nss-docker-ng.container-subdomains-allowed=true" hashicorp/http-echo -listen=:80 -text="✅ it works!"
+670b3dc0aa2761d0fa150180e1cc1769d5e7e5a3332c12562197c7a782ed8a94
+
+$ getent hosts my-app-with-subdomains.docker
+172.29.0.2      my-app-with-subdomains.docker 670b3dc0aa27.docker
+
+$ getent hosts foo.my-app-with-subdomains.docker
+172.29.0.2      my-app-with-subdomains.docker 670b3dc0aa27.docker foo.my-app-with-subdomains.docker
+
+$ docker stop my-app-with_subdomains
+```
+
 # Installation instructions
 
 ## Binary install
