@@ -1,0 +1,215 @@
+{
+  "Id": "c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff",
+  "Created": "2024-01-01T00:00:00.000000000Z",
+  "Path": "/http-echo",
+  "Args": [
+    "-listen=:80",
+    "-text=✅ it works!"
+  ],
+  "State": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 1337,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2024-01-01T00:00:00.000000000Z",
+    "FinishedAt": "0001-01-01T00:00:00Z"
+  },
+  "Image": "sha256:04fa556e62bddac2a783622a3cccc35d6d5c599199eecf75b6b4f2bc76c8c825",
+  "ResolvConfPath": "/var/lib/docker/containers/c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff/resolv.conf",
+  "HostnamePath": "/var/lib/docker/containers/c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff/hostname",
+  "HostsPath": "/var/lib/docker/containers/c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff/hosts",
+  "LogPath": "/var/lib/docker/containers/c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff/c0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ffeec0ff-json.log",
+  "Name": "/sunny-default-bridge-container-subdomains-allowed",
+  "RestartCount": 0,
+  "Driver": "overlay2",
+  "Platform": "linux",
+  "MountLabel": "",
+  "ProcessLabel": "",
+  "AppArmorProfile": "docker-default",
+  "ExecIDs": null,
+  "HostConfig": {
+    "Binds": null,
+    "ContainerIDFile": "",
+    "LogConfig": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "NetworkMode": "default",
+    "PortBindings": {},
+    "RestartPolicy": {
+      "Name": "no",
+      "MaximumRetryCount": 0
+    },
+    "AutoRemove": false,
+    "VolumeDriver": "",
+    "VolumesFrom": null,
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "CapAdd": null,
+    "CapDrop": null,
+    "CgroupnsMode": "private",
+    "Dns": [],
+    "DnsOptions": [],
+    "DnsSearch": [],
+    "ExtraHosts": null,
+    "GroupAdd": null,
+    "IpcMode": "private",
+    "Cgroup": "",
+    "Links": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyRootfs": false,
+    "SecurityOpt": null,
+    "UTSMode": "",
+    "UsernsMode": "",
+    "ShmSize": 67108864,
+    "Runtime": "runc",
+    "Isolation": "",
+    "CpuShares": 0,
+    "Memory": 0,
+    "NanoCpus": 0,
+    "CgroupParent": "",
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": [],
+    "BlkioDeviceReadBps": [],
+    "BlkioDeviceWriteBps": [],
+    "BlkioDeviceReadIOps": [],
+    "BlkioDeviceWriteIOps": [],
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpuRealtimePeriod": 0,
+    "CpuRealtimeRuntime": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "Devices": [],
+    "DeviceCgroupRules": null,
+    "DeviceRequests": null,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": null,
+    "OomKillDisable": null,
+    "PidsLimit": null,
+    "Ulimits": [],
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "IOMaximumIOps": 0,
+    "IOMaximumBandwidth": 0,
+    "MaskedPaths": [
+      "/proc/asound",
+      "/proc/acpi",
+      "/proc/kcore",
+      "/proc/keys",
+      "/proc/latency_stats",
+      "/proc/timer_list",
+      "/proc/timer_stats",
+      "/proc/sched_debug",
+      "/proc/scsi",
+      "/sys/firmware",
+      "/sys/devices/virtual/powercap"
+    ],
+    "ReadonlyPaths": [
+      "/proc/bus",
+      "/proc/fs",
+      "/proc/irq",
+      "/proc/sys",
+      "/proc/sysrq-trigger"
+    ]
+  },
+  "GraphDriver": {
+    "Data": {
+      "LowerDir": "/var/lib/docker/overlay2/X-init/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff:/var/lib/docker/overlay2/X/diff",
+      "MergedDir": "/var/lib/docker/overlay2/X/merged",
+      "UpperDir": "/var/lib/docker/overlay2/X/diff",
+      "WorkDir": "/var/lib/docker/overlay2/X/work"
+    },
+    "Name": "overlay2"
+  },
+  "Mounts": [],
+  "Config": {
+    "Hostname": "c0ffeec0ffee",
+    "Domainname": "",
+    "User": "65532",
+    "AttachStdin": false,
+    "AttachStdout": false,
+    "AttachStderr": false,
+    "ExposedPorts": {
+      "5678/tcp": {}
+    },
+    "Tty": false,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt",
+      "ECHO_TEXT=hello-world"
+    ],
+    "Cmd": [
+      "-listen=:80",
+      "-text=✅ it works!"
+    ],
+    "Image": "hashicorp/http-echo:1.0.0",
+    "Volumes": null,
+    "WorkingDir": "/home/nonroot",
+    "Entrypoint": [
+      "/http-echo"
+    ],
+    "OnBuild": null,
+    "Labels": {
+      ".com.github.petski.nss-docker-ng.container-subdomains-allowed": "true",
+      "maintainer": "HashiCorp Consul Team <consul@hashicorp.com>",
+      "name": "http-echo",
+      "release": "1.0.0",
+      "summary": "A test webserver that echos a response. You know, for kids.",
+      "vendor": "HashiCorp",
+      "version": "1.0.0"
+    }
+  },
+  "NetworkSettings": {
+    "Bridge": "",
+    "SandboxID": "X",
+    "SandboxKey": "/var/run/docker/netns/X",
+    "Ports": {
+      "5678/tcp": null
+    },
+    "HairpinMode": false,
+    "LinkLocalIPv6Address": "",
+    "LinkLocalIPv6PrefixLen": 0,
+    "SecondaryIPAddresses": null,
+    "SecondaryIPv6Addresses": null,
+    "EndpointID": "X",
+    "Gateway": "172.29.0.1",
+    "GlobalIPv6Address": "",
+    "GlobalIPv6PrefixLen": 0,
+    "IPAddress": "172.29.0.2",
+    "IPPrefixLen": 24,
+    "IPv6Gateway": "",
+    "MacAddress": "02:42:ac:1d:00:02",
+    "Networks": {
+      "bridge": {
+        "IPAMConfig": null,
+        "Links": null,
+        "Aliases": null,
+        "MacAddress": "x6:de:ad:c0:ff:ee",
+        "NetworkID": "X",
+        "EndpointID": "X",
+        "Gateway": "172.29.0.1",
+        "IPAddress": "172.29.0.2",
+        "IPPrefixLen": 24,
+        "IPv6Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "DriverOpts": null,
+        "DNSNames": null
+      }
+    }
+  }
+}

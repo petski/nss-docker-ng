@@ -18,6 +18,8 @@ use mocktopus::macros::mockable;
 
 static SUFFIX: &str = ".docker";
 static DOCKER_URI: &str = "unix:///var/run/docker.sock";
+static CONTAINER_SUBDOMAINS_ALLOWED_LABEL: &str =
+    ".com.github.petski.nss-docker-ng.container-subdomains-allowed";
 
 struct DockerNG;
 libnss_host_hooks!(docker_ng, DockerNG);
@@ -69,11 +71,47 @@ async fn get_host_by_name(
     let query_stripped = &query[..query.len() - SUFFIX.len()];
 
     // Fetch container information
-    let inspect_result = match docker.containers().get(query_stripped).inspect().await {
-        Ok(result) => result,
-        Err(_e) => {
-            debug_eprintln!("Failed to inspect container '{}': {}", query_stripped, _e);
-            return Ok(None);
+    let inspect_result = 'block: {
+        match docker.containers().get(query_stripped).inspect().await {
+            Ok(query_stripped_result) => query_stripped_result,
+            Err(_e) => {
+                debug_eprintln!("Failed to inspect container '{}': {}", query_stripped, _e);
+
+                if let Some((last_dot_index, _)) = query_stripped.match_indices('.').last() {
+                    let query_stripped_main_domain =
+                        &query_stripped[(last_dot_index + '.'.len_utf8())..];
+                    match docker
+                        .containers()
+                        .get(query_stripped_main_domain)
+                        .inspect()
+                        .await
+                    {
+                        Ok(query_stripped_main_domain_result) => {
+                            match query_stripped_main_domain_result.config.as_ref().and_then(
+                                |config| {
+                                    config.labels.as_ref().and_then(|labels| {
+                                        labels.get(CONTAINER_SUBDOMAINS_ALLOWED_LABEL)
+                                    })
+                                },
+                            ) {
+                                Some(label_value) => {
+                                    if label_value.eq("true")
+                                        || label_value.eq("True")
+                                        || label_value.eq("1")
+                                    {
+                                        break 'block query_stripped_main_domain_result;
+                                    } else {
+                                        return Ok(None);
+                                    }
+                                }
+                                None => return Ok(None),
+                            }
+                        }
+                        Err(_e) => return Ok(None),
+                    }
+                }
+                return Ok(None);
+            }
         }
     };
 
@@ -161,10 +199,16 @@ async fn get_host_by_name(
                 None => return Err("No Id".into()),
             };
 
+            let mut aliases = vec![[id[..12].to_string(), SUFFIX.to_string()].join("")];
+
+            if name.ne(query_stripped) {
+                aliases.push([query_stripped.to_string(), SUFFIX.to_string()].join(""))
+            }
+
             Ok(Some(Host {
                 name: [name.to_string(), SUFFIX.to_string()].join(""),
                 addresses: Addresses::V4(vec![ip]),
-                aliases: vec![[id[..12].to_string(), SUFFIX.to_string()].join("")],
+                aliases,
             }))
         }
         Err(_e) => {
@@ -203,6 +247,34 @@ mod tests {
             Response::Success(Host {
                 name: "sunny-default-bridge.docker".to_string(),
                 aliases: vec!["c0ffeec0ffee.docker".to_string()],
+                addresses: Addresses::V4(vec![Ipv4Addr::new(172, 29, 0, 2)]),
+            })
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name(
+                "sunny-default-bridge-container-subdomains-allowed.docker",
+                AddressFamily::IPv4
+            ),
+            Response::Success(Host {
+                name: "sunny-default-bridge-container-subdomains-allowed.docker".to_string(),
+                aliases: vec!["c0ffeec0ffee.docker".to_string()],
+                addresses: Addresses::V4(vec![Ipv4Addr::new(172, 29, 0, 2)]),
+            })
+        );
+
+        assert_eq!(
+            DockerNG::get_host_by_name(
+                "mega.very.sunny-default-bridge-container-subdomains-allowed.docker",
+                AddressFamily::IPv4
+            ),
+            Response::Success(Host {
+                name: "sunny-default-bridge-container-subdomains-allowed.docker".to_string(),
+                aliases: vec![
+                    "c0ffeec0ffee.docker".to_string(),
+                    "mega.very.sunny-default-bridge-container-subdomains-allowed.docker"
+                        .to_string()
+                ],
                 addresses: Addresses::V4(vec![Ipv4Addr::new(172, 29, 0, 2)]),
             })
         );
@@ -278,7 +350,7 @@ mod tests {
     /*
      * Returns a server and its mocks based on https://github.com/lipanski/mockito
      */
-    fn init_mocking_features() -> (Server, [Mock; 15]) {
+    fn init_mocking_features() -> (Server, [Mock; 17]) {
         let mut server = Server::new_with_opts(ServerOpts {
             assert_on_drop: true,
             ..Default::default()
@@ -291,13 +363,25 @@ mod tests {
 
         let _version_mock = server
             .mock("GET", "/version")
-            .expect(14)
+            .expect(16)
             .with_body_from_file("tests/resources/v1.44/version.body")
             .create();
 
         let _inspect_mock_sunny_default_bridge = server
             .mock("GET", "/v1.44/containers/sunny-default-bridge/json")
             .with_body_from_file("tests/resources/v1.44/containers/sunny-default-bridge/json.body")
+            .create();
+
+        let _inspect_mock_mega_very_sunny_default_bridge_container_subdomains_allowed = server
+            .mock("GET", "/v1.44/containers/mega.very.sunny-default-bridge-container-subdomains-allowed/json")
+            .with_status(404)
+            .with_body_from_file("tests/resources/v1.44/containers/mega.very.sunny-default-bridge-container-subdomains-allowed/json.body")
+            .create();
+
+        let _inspect_mock_sunny_default_bridge_container_subdomains_allowed = server
+            .mock("GET", "/v1.44/containers/sunny-default-bridge-container-subdomains-allowed/json")
+            .expect(2)
+            .with_body_from_file("tests/resources/v1.44/containers/sunny-default-bridge-container-subdomains-allowed/json.body")
             .create();
 
         let _inspect_mock_rainy_404 = server
@@ -383,6 +467,8 @@ mod tests {
             [
                 _version_mock,
                 _inspect_mock_sunny_default_bridge,
+                _inspect_mock_mega_very_sunny_default_bridge_container_subdomains_allowed,
+                _inspect_mock_sunny_default_bridge_container_subdomains_allowed,
                 _inspect_mock_rainy_404,
                 _inspect_mock_rainy_no_name,
                 _inspect_mock_rainy_no_network_mode,
