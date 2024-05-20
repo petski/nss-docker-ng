@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "nss-docker-ng"
-version = "1.0.5"
+version = "1.0.6"
 authors = ["Patrick Kuijvenhoven <patrick.kuijvenhoven@gmail.com>"]
 description = "NSS plugin for finding Docker containers by their ID or name"
 readme = "README.md"
