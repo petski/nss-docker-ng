@@ -1,8 +1,5 @@
-#[macro_use]
-extern crate lazy_static;
 extern crate debug_print;
 extern crate docker_api;
-extern crate libnss;
 
 use debug_print::debug_eprintln;
 use docker_api::Docker;
