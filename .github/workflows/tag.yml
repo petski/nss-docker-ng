@@ -94,8 +94,7 @@ jobs:
         # curl -s https://api.launchpad.net/1.0/ubuntu/series | jq -r '.entries[] | select(.active == true).name' | xargs | sed 's/ /, /g'
         distro: [
           [ noble,  "24.04" ],
-          [ mantic, "23.10" ],
-          [ jammy,  "22.04" ]
+          [ mantic, "23.10" ]
         ]
     env:
       DEBFULLNAME: Patrick Kuijvenhoven
@@ -103,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git archive --format=tar.gz --prefix="nss-docker-ng_${GITHUB_REF_NAME#v}/" -o "../nss-docker-ng_${GITHUB_REF_NAME#v}.orig.tar.gz" "$GITHUB_REF_NAME"
-      - run: sudo apt-get update && sudo apt-get -y install devscripts cargo dh-make patchelf
+      - run: sudo apt-get update && sudo apt-get -y install devscripts dh-sequence-installnss cargo dh-make patchelf
       - run: |
           dch \
             --create \
