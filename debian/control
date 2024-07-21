@@ -1,7 +1,7 @@
 Source: nss-docker-ng
 Section: admin
 Priority: optional
-Build-Depends: debhelper-compat (= 13), cargo, patchelf
+Build-Depends: debhelper-compat (= 13), dh-sequence-installnss, cargo, patchelf
 Maintainer: Patrick Kuijvenhoven <patrick.kuijvenhoven+nss-docker-ng@gmail.com>
 Standards-Version: 4.5.1
 Vcs-Git: https://github.com/petski/nss-docker-ng.git
@@ -10,7 +10,7 @@ Rules-Requires-Root: no
 
 Package: nss-docker-ng
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, perl | dh-nss
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: docker.io
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
