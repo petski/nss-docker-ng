@@ -10,9 +10,6 @@ use std::error::Error;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
-#[cfg(test)]
-use mocktopus::macros::mockable;
-
 static SUFFIX: &str = ".docker";
 static DOCKER_URI: &str = "unix:///var/run/docker.sock";
 static CONTAINER_SUBDOMAINS_ALLOWED_LABEL: &str =
@@ -27,14 +24,8 @@ impl HostHooks for DockerNG {
     }
 
     fn get_host_by_name(name: &str, family: AddressFamily) -> Response<Host> {
-        match get_host_by_name(name, family) {
-            Ok(Some(host)) => Response::Success(host),
-            Ok(None) => Response::NotFound,
-            Err(_e) => {
-                debug_eprintln!("get_host_by_name '{}' failed: {}", name, _e);
-                Response::Unavail
-            }
-        }
+        let provider = DefaultDockerUriProvider;
+        get_host_by_name_with_provider(name, family, &provider)
     }
 
     fn get_host_by_addr(_: IpAddr) -> Response<Host> {
@@ -42,26 +33,49 @@ impl HostHooks for DockerNG {
     }
 }
 
-#[cfg_attr(test, mockable)]
-pub fn get_docker_uri() -> String {
-    DOCKER_URI.to_string()
+trait DockerUriProvider {
+    fn get_docker_uri(&self) -> String;
+}
+
+struct DefaultDockerUriProvider;
+
+impl DockerUriProvider for DefaultDockerUriProvider {
+    fn get_docker_uri(&self) -> String {
+        DOCKER_URI.to_string()
+    }
 }
 
 #[tokio::main]
-async fn get_host_by_name(
+async fn get_host_by_name_with_provider(
     query: &str,
     family: AddressFamily,
+    provider: &dyn DockerUriProvider,
+) -> Response<Host> {
+    return match get_host_by_name_with_provider_inner(query, family, provider).await {
+        Ok(Some(host)) => Response::Success(host),
+        Ok(None) => Response::NotFound,
+        Err(_e) => {
+            debug_eprintln!("get_host_by_name '{}' failed: {}", query, _e);
+            Response::Unavail
+        }
+    };
+}
+
+async fn get_host_by_name_with_provider_inner(
+    query: &str,
+    family: AddressFamily,
+    provider: &dyn DockerUriProvider,
 ) -> Result<Option<Host>, Box<dyn Error>> {
     // Check if the query ends with the expected suffix and if the address family is IPv4
-    if !(query.ends_with(SUFFIX) &&
-        family == AddressFamily::IPv4 && // TODO you no v6? See https://github.com/petski/nss-docker-ng/issues/3
-        query.len() > SUFFIX.len())
+    if !(query.ends_with(SUFFIX)
+        && family == AddressFamily::IPv4 // TODO you no v6? See https://github.com/petski/nss-docker-ng/issues/3
+        && query.len() > SUFFIX.len())
     {
         return Ok(None);
     }
 
     // Initialize Docker API client
-    let mut docker = Docker::new(get_docker_uri())?;
+    let mut docker = Docker::new(provider.get_docker_uri())?;
     docker.adjust_api_version().await?;
 
     // Strip suffix from query
@@ -189,7 +203,7 @@ async fn get_host_by_name(
         None => return Err("Endpoint has no IP address".into()),
     };
 
-    return match Ipv4Addr::from_str(ip_address) {
+    match Ipv4Addr::from_str(ip_address) {
         Ok(ip) => {
             let id = match inspect_result.id.as_ref() {
                 Some(id) => id,
@@ -208,39 +222,48 @@ async fn get_host_by_name(
                 aliases,
             }))
         }
-        Err(_e) => {
-            return Err(format!("Failed to parse IP address '{ip_address}': {_e}").into());
-        }
-    };
+        Err(_e) => Err(format!("Failed to parse IP address '{ip_address}': {_e}").into()),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockall::{mock, predicate::*};
     use mockito::{Mock, Server, ServerOpts};
-    use mocktopus::mocking::{MockResult, Mockable};
+
+    mock! {
+        pub DockerUriProvider {}
+        impl DockerUriProvider for DockerUriProvider {
+            fn get_docker_uri(&self) -> String;
+        }
+    }
 
     #[test]
     fn test_get_host_by_name() {
+        let (_server, _mocks, mock_provider) = init_mocking_features();
+
         assert_eq!(
-            DockerNG::get_host_by_name(".foo", AddressFamily::IPv4),
+            get_host_by_name_with_provider(".foo", AddressFamily::IPv4, &mock_provider),
             Response::NotFound
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("foo.docker", AddressFamily::IPv6),
+            get_host_by_name_with_provider("foo.docker", AddressFamily::IPv6, &mock_provider),
             Response::NotFound
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name(".docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(".docker", AddressFamily::IPv4, &mock_provider),
             Response::NotFound
         );
 
-        let (_server, _mocks) = init_mocking_features();
-
         assert_eq!(
-            DockerNG::get_host_by_name("sunny-default-bridge.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "sunny-default-bridge.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Success(Host {
                 name: "sunny-default-bridge.docker".to_string(),
                 aliases: vec!["c0ffeec0ffee.docker".to_string()],
@@ -249,9 +272,10 @@ mod tests {
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name(
+            get_host_by_name_with_provider(
                 "sunny-default-bridge-container-subdomains-allowed.docker",
-                AddressFamily::IPv4
+                AddressFamily::IPv4,
+                &mock_provider,
             ),
             Response::Success(Host {
                 name: "sunny-default-bridge-container-subdomains-allowed.docker".to_string(),
@@ -261,93 +285,124 @@ mod tests {
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name(
+            get_host_by_name_with_provider(
                 "mega.very.sunny-default-bridge-container-subdomains-allowed.docker",
-                AddressFamily::IPv4
+                AddressFamily::IPv4,
+                &mock_provider,
             ),
             Response::Success(Host {
                 name: "sunny-default-bridge-container-subdomains-allowed.docker".to_string(),
                 aliases: vec![
                     "c0ffeec0ffee.docker".to_string(),
                     "mega.very.sunny-default-bridge-container-subdomains-allowed.docker"
-                        .to_string()
+                        .to_string(),
                 ],
                 addresses: Addresses::V4(vec![Ipv4Addr::new(172, 29, 0, 2)]),
             })
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-404.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider("rainy-404.docker", AddressFamily::IPv4, &mock_provider),
             Response::NotFound
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-no-name.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-no-name.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-no-network-mode.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-no-network-mode.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
+            Response::Unavail
+        );
+
+        for name in [
+            "rainy-network-mode-none.docker",
+            "rainy-network-mode-host.docker",
+            "rainy-network-mode-container.docker",
+        ] {
+            assert_eq!(
+                get_host_by_name_with_provider(name, AddressFamily::IPv4, &mock_provider),
+                Response::NotFound
+            );
+        }
+
+        assert_eq!(
+            get_host_by_name_with_provider(
+                "rainy-zero-networks.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-network-mode-none.docker", AddressFamily::IPv4),
-            Response::NotFound
-        );
-
-        assert_eq!(
-            DockerNG::get_host_by_name("rainy-network-mode-host.docker", AddressFamily::IPv4),
-            Response::NotFound
-        );
-
-        assert_eq!(
-            DockerNG::get_host_by_name("rainy-network-mode-container.docker", AddressFamily::IPv4),
-            Response::NotFound
-        );
-
-        assert_eq!(
-            DockerNG::get_host_by_name("rainy-zero-networks.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-no-networks.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-no-networks.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-network-not-exists.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-network-not-exists.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-ip-address-empty.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-ip-address-empty.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-no-ip-address.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-no-ip-address.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-unparseable-ip-address.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
 
         assert_eq!(
-            DockerNG::get_host_by_name("rainy-unparseable-ip-address.docker", AddressFamily::IPv4),
+            get_host_by_name_with_provider(
+                "rainy-no-id.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
             Response::Unavail
         );
-
-        assert_eq!(
-            DockerNG::get_host_by_name("rainy-no-id.docker", AddressFamily::IPv4),
-            Response::Unavail
-        );
-
-        clear_mocking_features();
     }
 
     /*
      * Returns a server and its mocks based on https://github.com/lipanski/mockito
      */
-    fn init_mocking_features() -> (Server, [Mock; 17]) {
+    fn init_mocking_features() -> (Server, [Mock; 17], MockDockerUriProvider) {
         let mut server = Server::new_with_opts(ServerOpts {
             assert_on_drop: true,
             ..Default::default()
@@ -355,8 +410,10 @@ mod tests {
 
         let url = server.url();
 
-        // Mock it
-        get_docker_uri.mock_safe(move || MockResult::Return(url.to_owned()));
+        let mut mock_provider = MockDockerUriProvider::new();
+        mock_provider
+            .expect_get_docker_uri()
+            .return_const(url.to_owned());
 
         let _version_mock = server
             .mock("GET", "/version")
@@ -437,6 +494,7 @@ mod tests {
 
         let _inspect_mock_rainy_ip_address_empty = server
             .mock("GET", "/v1.44/containers/rainy-ip-address-empty/json")
+            .expect(1)
             .with_body_from_file(
                 "tests/resources/v1.44/containers/rainy-ip-address-empty/json.body",
             )
@@ -480,10 +538,7 @@ mod tests {
                 _inspect_mock_rainy_unparseable_ip_address,
                 _inspect_mock_rainy_no_id,
             ],
+            mock_provider,
         )
-    }
-
-    fn clear_mocking_features() {
-        get_docker_uri.clear_mock();
     }
 }
