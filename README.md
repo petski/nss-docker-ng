@@ -1,5 +1,6 @@
 [![QC](https://github.com/petski/nss-docker-ng/actions/workflows/qc.yml/badge.svg)](https://github.com/petski/nss-docker-ng/actions/workflows/qc.yml)
 [![crates.io](https://img.shields.io/crates/v/nss-docker-ng.svg)](https://crates.io/crates/nss-docker-ng)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/petski/nss-docker-ng)
 
 # Introduction
 
