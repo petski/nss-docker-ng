@@ -27,6 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get -y install jq
+      - uses: dtolnay/rust-toolchain@1.87.0
       - id: cargo_package_version
         run: |
           version="$(cargo metadata --no-deps --format-version 1 | jq '.packages[0].version' -r)"
@@ -47,6 +48,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - run: sudo apt-get update && sudo apt-get -y install patchelf
+    - uses: dtolnay/rust-toolchain@1.87.0
     - run: |
         cargo build --release --verbose
         cp target/release/libnss_docker_ng.so ./libnss_docker_ng.so
@@ -104,7 +106,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git archive --format=tar.gz --prefix="nss-docker-ng_${GITHUB_REF_NAME#v}/" -o "../nss-docker-ng_${GITHUB_REF_NAME#v}.orig.tar.gz" "$GITHUB_REF_NAME"
-      - run: sudo apt-get update && sudo apt-get -y install devscripts dh-sequence-installnss build-essential cargo dh-make patchelf
+      - uses: dtolnay/rust-toolchain@1.87.0
+      - run: sudo apt-get update && sudo apt-get -y install devscripts dh-sequence-installnss build-essential dh-make patchelf
       - run: |
           dch \
             --create \
