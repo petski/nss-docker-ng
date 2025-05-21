@@ -117,6 +117,7 @@ jobs:
       - run: |
           mkdir -p .cargo
           cargo vendor | tee .cargo/config.toml
+          find vendor/ -name Cargo.lock -delete
           tar -zcf vendor.tar.gz Cargo.lock .cargo/config.toml vendor/
           rm -rf Cargo.lock .cargo/config.toml vendor/
       # From https://stackoverflow.com/a/61748039
