@@ -74,7 +74,7 @@ async fn get_host_by_name(
             Err(_e) => {
                 debug_eprintln!("Failed to inspect container '{}': {}", query_stripped, _e);
 
-                if let Some((last_dot_index, _)) = query_stripped.match_indices('.').last() {
+                if let Some((last_dot_index, _)) = query_stripped.match_indices('.').next_back() {
                     let query_stripped_main_domain =
                         &query_stripped[(last_dot_index + '.'.len_utf8())..];
                     match docker
@@ -176,7 +176,7 @@ async fn get_host_by_name(
     // Get the end point settings for the network with the name in network_mode
     let end_point_settings = match networks.get(network_mode) {
         Some(end_point_settings) => end_point_settings,
-        None => return Err(format!("Network '{}' not found", network_mode).into()),
+        None => return Err(format!("Network '{network_mode}' not found").into()),
     };
 
     let ip_address = match &end_point_settings.ip_address {
@@ -209,7 +209,7 @@ async fn get_host_by_name(
             }))
         }
         Err(_e) => {
-            return Err(format!("Failed to parse IP address '{}': {}", ip_address, _e).into());
+            return Err(format!("Failed to parse IP address '{ip_address}': {_e}").into());
         }
     };
 }
