@@ -4,7 +4,7 @@
 
 # Introduction
 
-`nss-docker-ng` is a NSS plugin for finding Docker containers by their ID or name.
+`nss-docker-ng` is a NSS plugin for finding Docker containers by their ID or name. This is more or less a oxidized version of https://github.com/dex4er/nss-docker.
 
 The container names are searched in a virtual domain name `.docker`.
 
@@ -83,6 +83,20 @@ cargo build --release && \
 
 Then, add the `docker_ng` service to the `hosts:`-line in `/etc/nsswitch.conf`. For example: `hosts: files docker_ng dns`
 
+# Firefox
+
+- Install from [`apt`, not `snap`](https://askubuntu.com/questions/1399383/), so system NSS is used
+- Under `about:config` include `.docker` in both `network.dns.localDomains` and `network.trr.excluded-domains`
+- Tell AppArmor it's ok for firefox to access `/run/docker.sock`:
+
+  ```bash
+  sudo tee /etc/apparmor.d/local/usr.bin.firefox >/dev/null <<'EOF'
+  # allow Firefox (and thus libnss_docker_ng) to talk to Docker
+  /run/docker.sock rw,
+  EOF
+  sudo apparmor_parser -r /etc/apparmor.d/usr.bin.firefox
+  ```
+
 # Contributions
 
 Contributions are welcome! Nothing to contribute, but you do appreciate this software? Please star :star: this repo.
@@ -108,6 +122,7 @@ There are other options to achieve this feature. I'm comparing them [HERE](COMPA
 
 # Useful links
 
+* https://github.com/dex4er/nss-docker/issues/15#issuecomment-1963101189
 * https://crates.io/crates/nss-docker-ng
 * https://launchpad.net/~petski/+archive/ubuntu/nss-docker-ng
 * https://docs.rs/docker-api/latest/docker_api/
