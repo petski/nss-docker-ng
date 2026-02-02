@@ -92,11 +92,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # curl -s https://api.launchpad.net/1.0/ubuntu/series | jq -r '.entries[] | select(.active == true).name' | xargs | sed 's/ /, /g'
+        # curl -s https://api.launchpad.net/1.0/ubuntu/series | jq -r '.entries[] | select(.active == true) | "[ \(.name), \"\(.version)\" ]"'
         distro: [
-          [ noble,  "24.04" ],
-          [ mantic, "23.10" ],
-          [ jammy,  "22.04" ]
+          [ questing, "25.10" ],
+          [ noble, "24.04" ],
+          [ jammy, "22.04" ]
         ]
     env:
       DEBFULLNAME: Patrick Kuijvenhoven
