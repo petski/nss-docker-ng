@@ -104,7 +104,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git archive --format=tar.gz --prefix="nss-docker-ng_${GITHUB_REF_NAME#v}/" -o "../nss-docker-ng_${GITHUB_REF_NAME#v}.orig.tar.gz" "$GITHUB_REF_NAME"
-      - run: sudo apt-get update && sudo apt-get -y install devscripts dh-sequence-installnss build-essential cargo dh-make patchelf
+      - run: sudo apt-get update && sudo apt-get -y install devscripts dh-sequence-installnss build-essential cargo-1.85 dh-make patchelf
       - run: |
           dch \
             --create \

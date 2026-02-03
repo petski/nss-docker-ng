@@ -1,7 +1,7 @@
 Source: nss-docker-ng
 Section: admin
 Priority: optional
-Build-Depends: debhelper-compat (= 13), dh-sequence-installnss, cargo, patchelf
+Build-Depends: debhelper-compat (= 13), dh-sequence-installnss, cargo-1.85, patchelf
 Maintainer: Patrick Kuijvenhoven <patrick.kuijvenhoven+nss-docker-ng@gmail.com>
 Standards-Version: 4.5.1
 Vcs-Git: https://github.com/petski/nss-docker-ng.git
