@@ -3,13 +3,15 @@
 %:
 	dh $@
 
+CARGO = cargo-1.91
+
 override_dh_auto_install:
 	# I've seen `debcargo`. It looks promising, but it doesn't seem to work well for `cdylib`
 	if [ -f "./vendor.tar.gz" ]; then \
 		tar zxvf ./vendor.tar.gz; \
-		cargo build --release --offline; \
+		$(CARGO) build --release --offline; \
 	else \
-		cargo build --release; \
+		$(CARGO) build --release; \
 	fi
 	patchelf --set-soname libnss_docker_ng.so.2 ./target/release/libnss_docker_ng.so
 	ln -s libnss_docker_ng.so ./target/release/libnss_docker_ng.so.2
