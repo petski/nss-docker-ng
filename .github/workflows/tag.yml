@@ -65,7 +65,7 @@ jobs:
         with:
           name: libnss_docker_ng.so
       - name: Create GH release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
