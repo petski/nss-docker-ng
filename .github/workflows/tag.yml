@@ -38,7 +38,7 @@ jobs:
     steps:
       - name: Check Cargo.toml version
         if: ${{ needs.cargo_package_version.outputs.cargo_package_version_vprefixed != github.ref_name }}
-        uses: actions/github-script@v3
+        uses: actions/github-script@v9
         with:
           script: core.setFailed('Cargo.toml has ${{ needs.cargo_package_version.outputs.cargo_package_version_vprefixed }}, tag is ${{ github.ref_name }}')
   build_release:
