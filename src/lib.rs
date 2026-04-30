@@ -226,7 +226,8 @@ async fn get_host_by_name_with_provider_inner(
                 None => return Err("No Id".into()),
             };
 
-            let mut aliases = vec![[id[..12].to_string(), SUFFIX.to_string()].join("")];
+            let short_id = id.get(..12).unwrap_or(id);
+            let mut aliases = vec![[short_id.to_string(), SUFFIX.to_string()].join("")];
 
             if name.ne(query_stripped) {
                 aliases.push([query_stripped.to_string(), SUFFIX.to_string()].join(""))
