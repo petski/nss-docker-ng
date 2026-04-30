@@ -8,7 +8,7 @@ jobs:
   qc:
     uses: ./.github/workflows/qc.yml
   build_changelog:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       changelog: ${{ steps.build_changelog.outputs.changelog }}
     steps:
@@ -20,7 +20,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   cargo_package_version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       cargo_package_version: ${{ steps.cargo_package_version.outputs.cargo_package_version }}
       cargo_package_version_vprefixed: ${{ steps.cargo_package_version.outputs.cargo_package_version_vprefixed }}
@@ -34,7 +34,7 @@ jobs:
           echo "cargo_package_version_vprefixed=v${version}" >> $GITHUB_OUTPUT
   check_cargo_package_version_eq_tag:
     needs: cargo_package_version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check Cargo.toml version
         if: ${{ needs.cargo_package_version.outputs.cargo_package_version_vprefixed != github.ref_name }}
@@ -43,7 +43,7 @@ jobs:
           script: core.setFailed('Cargo.toml has ${{ needs.cargo_package_version.outputs.cargo_package_version_vprefixed }}, tag is ${{ github.ref_name }}')
   build_release:
     needs: [qc, check_cargo_package_version_eq_tag]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - run: sudo apt-get update && sudo apt-get -y install patchelf
@@ -57,7 +57,7 @@ jobs:
         name: libnss_docker_ng.so
   create_gh_release:
     needs: [build_release, build_changelog]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -78,7 +78,7 @@ jobs:
   crates_io_publish:
     needs: create_gh_release
     name: Publish (crates.io)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
