@@ -16,6 +16,10 @@ static DOCKER_URI: &str = "unix:///var/run/docker.sock";
 static CONTAINER_SUBDOMAINS_ALLOWED_LABEL: &str =
     ".com.github.petski.nss-docker-ng.container-subdomains-allowed";
 
+fn with_suffix(name: &str) -> String {
+    format!("{name}{SUFFIX}")
+}
+
 struct DockerNG;
 libnss_host_hooks!(docker_ng, DockerNG);
 
@@ -227,18 +231,21 @@ async fn get_host_by_name_with_provider_inner(
             };
 
             let short_id = id.get(..12).unwrap_or(id);
-            let mut aliases = vec![[short_id.to_string(), SUFFIX.to_string()].join("")];
+            let mut aliases = vec![with_suffix(short_id)];
 
             if name.ne(query_stripped) {
-                aliases.push([query_stripped.to_string(), SUFFIX.to_string()].join(""))
+                let query_alias = with_suffix(query_stripped);
+                if !aliases.contains(&query_alias) {
+                    aliases.push(query_alias);
+                }
             }
 
-            let host_name = [name.to_string(), SUFFIX.to_string()].join("");
+            let host_name = with_suffix(&name);
 
             // Include network aliases from the endpoint settings
             if let Some(endpoint_aliases) = &end_point_settings.aliases {
                 for alias in endpoint_aliases {
-                    let alias_with_suffix = [alias.to_string(), SUFFIX.to_string()].join("");
+                    let alias_with_suffix = with_suffix(alias);
                     if alias_with_suffix != host_name && !aliases.contains(&alias_with_suffix) {
                         aliases.push(alias_with_suffix);
                     }
