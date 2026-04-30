@@ -51,7 +51,7 @@ jobs:
         cargo build --release --verbose
         cp target/release/libnss_docker_ng.so ./libnss_docker_ng.so
         patchelf --set-soname libnss_docker_ng.so.2 ./libnss_docker_ng.so
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         path: libnss_docker_ng.so
         name: libnss_docker_ng.so
@@ -61,7 +61,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: libnss_docker_ng.so
       - name: Create GH release
