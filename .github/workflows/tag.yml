@@ -25,7 +25,7 @@ jobs:
       cargo_package_version: ${{ steps.cargo_package_version.outputs.cargo_package_version }}
       cargo_package_version_vprefixed: ${{ steps.cargo_package_version.outputs.cargo_package_version_vprefixed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: sudo apt-get update && sudo apt-get -y install jq
       - id: cargo_package_version
         run: |
@@ -45,7 +45,7 @@ jobs:
     needs: [qc, check_cargo_package_version_eq_tag]
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - run: sudo apt-get update && sudo apt-get -y install patchelf
     - run: |
         cargo build --release --verbose
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CRATES_IO_API_TOKEN }}
@@ -101,7 +101,7 @@ jobs:
       DEBFULLNAME: Patrick Kuijvenhoven
       DEBEMAIL: patrick.kuijvenhoven+nss-docker-ng@gmail.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: git archive --format=tar.gz --prefix="nss-docker-ng_${GITHUB_REF_NAME#v}/" -o "../nss-docker-ng_${GITHUB_REF_NAME#v}.orig.tar.gz" "$GITHUB_REF_NAME"
       - run: sudo apt-get update && sudo apt-get -y install devscripts dh-sequence-installnss build-essential cargo-1.91 dh-make patchelf
       - run: |
