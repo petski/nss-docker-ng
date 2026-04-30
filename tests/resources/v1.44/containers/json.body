@@ -1,0 +1,39 @@
+[
+  {
+    "Id": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "Names": [
+      "/sunny-alias-lookup"
+    ],
+    "Image": "my-service-image",
+    "ImageID": "sha256:04fa556e62bddac2a783622a3cccc35d6d5c599199eecf75b6b4f2bc76c8c825",
+    "Command": "/entrypoint.sh",
+    "Created": 1704067200,
+    "Ports": [],
+    "Labels": {},
+    "State": "running",
+    "Status": "Up 1 hour",
+    "HostConfig": {
+      "NetworkMode": "my-network"
+    },
+    "NetworkSettings": {
+      "Networks": {
+        "my-network": {
+          "IPAMConfig": null,
+          "Links": null,
+          "Aliases": null,
+          "NetworkID": "X",
+          "EndpointID": "X",
+          "Gateway": "172.29.0.1",
+          "IPAddress": "172.29.0.3",
+          "IPPrefixLen": 24,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "MacAddress": "02:42:ac:1d:00:03",
+          "DriverOpts": null
+        }
+      }
+    },
+    "Mounts": []
+  }
+]

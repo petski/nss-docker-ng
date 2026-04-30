@@ -2,6 +2,7 @@ extern crate debug_print;
 extern crate docker_api;
 
 use debug_print::debug_eprintln;
+use docker_api::opts::ContainerListOpts;
 use docker_api::Docker;
 use libnss::host::{AddressFamily, Addresses, Host, HostHooks};
 use libnss::interop::Response;
@@ -87,6 +88,21 @@ async fn get_host_by_name_with_provider_inner(
             Ok(query_stripped_result) => query_stripped_result,
             Err(_e) => {
                 debug_eprintln!("Failed to inspect container '{}': {}", query_stripped, _e);
+
+                // Fallback: search all running containers for a matching network alias
+                match find_container_by_alias(&docker, query_stripped).await {
+                    Ok(Some(result)) => break 'block result,
+                    Ok(None) => {
+                        debug_eprintln!("No container found with alias '{}'", query_stripped);
+                    }
+                    Err(_alias_err) => {
+                        debug_eprintln!(
+                            "Alias lookup failed for '{}': {}",
+                            query_stripped,
+                            _alias_err
+                        );
+                    }
+                }
 
                 if let Some((last_dot_index, _)) = query_stripped.match_indices('.').next_back() {
                     let query_stripped_main_domain =
@@ -216,14 +232,78 @@ async fn get_host_by_name_with_provider_inner(
                 aliases.push([query_stripped.to_string(), SUFFIX.to_string()].join(""))
             }
 
+            let host_name = [name.to_string(), SUFFIX.to_string()].join("");
+
+            // Include network aliases from the endpoint settings
+            if let Some(endpoint_aliases) = &end_point_settings.aliases {
+                for alias in endpoint_aliases {
+                    let alias_with_suffix = [alias.to_string(), SUFFIX.to_string()].join("");
+                    if alias_with_suffix != host_name && !aliases.contains(&alias_with_suffix) {
+                        aliases.push(alias_with_suffix);
+                    }
+                }
+            }
+
             Ok(Some(Host {
-                name: [name.to_string(), SUFFIX.to_string()].join(""),
+                name: host_name,
                 addresses: Addresses::V4(vec![ip]),
                 aliases,
             }))
         }
         Err(_e) => Err(format!("Failed to parse IP address '{ip_address}': {_e}").into()),
     }
+}
+
+/// Search all running containers for one whose network aliases contain the given name.
+async fn find_container_by_alias(
+    docker: &Docker,
+    alias: &str,
+) -> Result<Option<docker_api::models::ContainerInspect200Response>, Box<dyn Error>> {
+    let list_opts = ContainerListOpts::builder().build();
+    let containers = docker.containers().list(&list_opts).await?;
+
+    for container in &containers {
+        let id = match &container.id {
+            Some(id) => id,
+            None => continue,
+        };
+
+        let inspect = match docker.containers().get(id).inspect().await {
+            Ok(inspect) => inspect,
+            Err(_e) => {
+                debug_eprintln!(
+                    "Alias lookup: failed to inspect container '{}': {}",
+                    id.get(..12).unwrap_or(id),
+                    _e
+                );
+                continue;
+            }
+        };
+
+        let networks = match inspect
+            .network_settings
+            .as_ref()
+            .and_then(|s| s.networks.as_ref())
+        {
+            Some(networks) => networks,
+            None => continue,
+        };
+
+        for endpoint in networks.values() {
+            if let Some(aliases) = &endpoint.aliases {
+                if aliases.iter().any(|a| a == alias) {
+                    debug_eprintln!(
+                        "Found container '{}' by alias '{}'",
+                        id.get(..12).unwrap_or(id),
+                        alias
+                    );
+                    return Ok(Some(inspect));
+                }
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -397,12 +477,30 @@ mod tests {
             ),
             Response::Unavail
         );
+
+        // Test alias lookup: "my-service" is a network alias for "sunny-alias-lookup"
+        assert_eq!(
+            get_host_by_name_with_provider(
+                "my-service.docker",
+                AddressFamily::IPv4,
+                &mock_provider,
+            ),
+            Response::Success(Host {
+                name: "sunny-alias-lookup.docker".to_string(),
+                aliases: vec![
+                    "deadbeefdead.docker".to_string(),
+                    "my-service.docker".to_string(),
+                    "my-service-alias.docker".to_string(),
+                ],
+                addresses: Addresses::V4(vec![Ipv4Addr::new(172, 29, 0, 3)]),
+            })
+        );
     }
 
     /*
      * Returns a server and its mocks based on https://github.com/lipanski/mockito
      */
-    fn init_mocking_features() -> (Server, [Mock; 17], MockDockerUriProvider) {
+    fn init_mocking_features() -> (Server, [Mock; 20], MockDockerUriProvider) {
         let mut server = Server::new_with_opts(ServerOpts {
             assert_on_drop: true,
             ..Default::default()
@@ -417,7 +515,7 @@ mod tests {
 
         let _version_mock = server
             .mock("GET", "/version")
-            .expect(16)
+            .expect(17)
             .with_body_from_file("tests/resources/v1.44/version.body")
             .create();
 
@@ -517,6 +615,26 @@ mod tests {
             .with_body_from_file("tests/resources/v1.44/containers/rainy-no-id/json.body")
             .create();
 
+        // Alias lookup mocks: "my-service" direct lookup returns 404, triggering
+        // the container list → inspect fallback path
+        let _container_list_mock = server
+            .mock("GET", "/v1.44/containers/json")
+            .expect_at_least(1)
+            .with_body_from_file("tests/resources/v1.44/containers/json.body")
+            .create();
+
+        let _inspect_mock_my_service_404 = server
+            .mock("GET", "/v1.44/containers/my-service/json")
+            .with_status(404)
+            .with_body(r#"{"message":"No such container: my-service"}"#)
+            .create();
+
+        let _inspect_mock_sunny_alias_lookup = server
+            .mock("GET", "/v1.44/containers/deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef/json")
+            .expect_at_least(1)
+            .with_body_from_file("tests/resources/v1.44/containers/sunny-alias-lookup/json.body")
+            .create();
+
         (
             server,
             [
@@ -537,6 +655,9 @@ mod tests {
                 _inspect_mock_rainy_no_ip_address,
                 _inspect_mock_rainy_unparseable_ip_address,
                 _inspect_mock_rainy_no_id,
+                _container_list_mock,
+                _inspect_mock_my_service_404,
+                _inspect_mock_sunny_alias_lookup,
             ],
             mock_provider,
         )
