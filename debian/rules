@@ -3,7 +3,7 @@
 %:
 	dh $@
 
-CARGO = cargo-1.91
+CARGO = cargo-1.97
 
 override_dh_auto_install:
 	# I've seen `debcargo`. It looks promising, but it doesn't seem to work well for `cdylib`

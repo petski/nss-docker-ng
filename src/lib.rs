@@ -125,17 +125,12 @@ async fn get_host_by_name_with_provider_inner(
                                     })
                                 },
                             ) {
-                                Some(label_value) => {
-                                    if label_value.eq("true")
-                                        || label_value.eq("True")
-                                        || label_value.eq("1")
-                                    {
-                                        break 'block query_stripped_main_domain_result;
-                                    } else {
-                                        return Ok(None);
-                                    }
+                                Some(label_value)
+                                    if matches!(label_value.as_str(), "true" | "True" | "1") =>
+                                {
+                                    break 'block query_stripped_main_domain_result;
                                 }
-                                None => return Ok(None),
+                                _ => return Ok(None),
                             }
                         }
                         Err(_e) => return Ok(None),
