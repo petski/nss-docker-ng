@@ -26,3 +26,7 @@ mockito = "1.4.0"
 # https://github.com/johnthagen/min-sized-rust
 [profile.release]
 strip = true
+
+[patch.crates-io]
+# Fix for ERANGE handling, until https://github.com/csnewman/libnss-rs/pull/28 is merged and released
+libnss = { git = "https://github.com/petski/libnss-rs", rev = "f54bb532f9951b7c79959522a0ab0ccc7a8abe17" }
